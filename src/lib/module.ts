@@ -13,6 +13,7 @@ import { MaterialIconModule } from './material-icon/index';
 import { MenuModule } from './menu/index';
 import { RadioModule } from './radio/index';
 import { RippleModule } from './ripple/index';
+import { SelectModule } from './select/index';
 import { SnackbarModule } from './snackbar/index';
 import { SwitchModule } from './switch/index';
 import { TextfieldModule } from './textfield/index';
@@ -34,6 +35,7 @@ const MATERIAL_MODULES = [
   MenuModule,
   RadioModule,
   RippleModule,
+  SelectModule,
   SnackbarModule,
   SwitchModule,
   TextfieldModule,
