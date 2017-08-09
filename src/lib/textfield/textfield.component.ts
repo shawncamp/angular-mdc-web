@@ -17,7 +17,6 @@
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { EventRegistry } from '../common/event-registry';
 import { toBoolean } from '../common/boolean-property';
-import { Ripple } from '../ripple/ripple.directive';
 
 import { MDCTextfieldAdapter } from './textfield-adapter';
 import { MDCTextfieldFoundation } from '@material/textfield';
@@ -28,6 +27,8 @@ export const MD_TEXTFIELD_CONTROL_VALUE_ACCESSOR: Provider = {
   multi: true
 };
 
+let nextElId_ = 0;
+
 @Directive({
   selector: '[mdc-textfield-helptext]'
 })
@@ -36,12 +37,22 @@ export class TextfieldHelptextDirective {
   @Input() persistent: boolean;
   @Input() validation: boolean;
   @HostBinding('class.mdc-textfield-helptext') isHostClass = true;
+  @HostBinding('attr.aria-hidden') ariaHidden: string = 'true';
   @HostBinding('class.mdc-textfield-helptext--persistent') get classPersistent(): string {
     return this.persistent ? 'mdc-textfield-helptext--persistent' : '';
   }
   @HostBinding('class.mdc-textfield-helptext--validation-msg') get classValidation(): string {
     return this.validation ? 'mdc-textfield-helptext--validation-msg' : '';
   }
+
+  constructor(public elementRef: ElementRef) { }
+}
+
+@Directive({
+  selector: '[mdc-textfield-label], mdc-textfield-label'
+})
+export class TextfieldLabelDirective {
+  @HostBinding('class.mdc-textfield__label') isHostClass = true;
 
   constructor(public elementRef: ElementRef) { }
 }
@@ -57,7 +68,7 @@ export class TextfieldHelptextDirective {
     class="mdc-textfield__input"
     type="text"
     [attr.name]="name"
-    [id]="id"
+    [id]="inputId"
     [placeholder]="placeholder ? placeholder : ''"
     [tabindex]="tabindex"
     [maxlength]="maxlength"
@@ -73,10 +84,10 @@ export class TextfieldHelptextDirective {
     #input
     class="mdc-textfield__input"
     [type]="type"
-    [id]="id"
+    [id]="inputId"
     [attr.name]="name"
     [(ngModel)]="value"
-    [placeholder]="placeholder ? placeholder : ''"
+    [placeholder]="placeholder"
     [tabindex]="tabindex"
     [maxlength]="maxlength"
     [disabled]="disabled"
@@ -85,16 +96,18 @@ export class TextfieldHelptextDirective {
     (keydown)="onKeyDown($event)"
     (blur)="onBlur($event)"
     (input)="onInput($event)" />
-  <label #inputlabel [attr.for]="id" class="mdc-textfield__label" *ngIf="!placeholder">{{label}}</label>
-`,
+    <mdc-textfield-label [attr.for]="inputId" *ngIf="!placeholder">{{label}}</mdc-textfield-label>
+  `,
   encapsulation: ViewEncapsulation.None,
   providers: [
-    MD_TEXTFIELD_CONTROL_VALUE_ACCESSOR,
+    MD_TEXTFIELD_CONTROL_VALUE_ACCESSOR
   ],
-  viewProviders: [Ripple]
 })
 export class TextfieldComponent implements AfterViewInit, OnDestroy {
-  @Input() id: string;
+  @Input() id: string = `mdc-textfield-${++nextElId_}`;
+  get inputId(): string {
+    return `input-${this.id}`;
+  }
   @Input() name: string;
   @Input() type: string = 'text';
   @Input() value: string;
@@ -108,7 +121,7 @@ export class TextfieldComponent implements AfterViewInit, OnDestroy {
   @Input() dense: boolean;
   @Input() required: boolean;
   @Input() label: string;
-  @Input() placeholder: string;
+  @Input() placeholder: string = '';
   @Input() tabindex: number;
   @Input() rows: number;
   @Input() cols: number;
@@ -130,8 +143,8 @@ export class TextfieldComponent implements AfterViewInit, OnDestroy {
     return this.dense ? 'mdc-textfield--dense' : '';
   }
   @ViewChild('input') public inputEl: ElementRef;
-  @ViewChild('inputlabel') public inputLabel: ElementRef;
   @ViewChild(TextfieldHelptextDirective) helpText: TextfieldHelptextDirective;
+  @ViewChild(TextfieldLabelDirective) inputLabel: TextfieldLabelDirective;
 
   onTouched: () => any = () => { };
 
@@ -147,14 +160,14 @@ export class TextfieldComponent implements AfterViewInit, OnDestroy {
     addClassToLabel: (className: string) => {
       if (this.inputLabel) {
         if (this.label && !this.fullwidth) {
-          this._renderer.addClass(this.inputLabel.nativeElement, className);
+          this._renderer.addClass(this.inputLabel.elementRef.nativeElement, className);
         }
       }
     },
     removeClassFromLabel: (className: string) => {
       if (this.inputLabel) {
         if (this.label && !this.fullwidth) {
-          this._renderer.removeClass(this.inputLabel.nativeElement, className);
+          this._renderer.removeClass(this.inputLabel.elementRef.nativeElement, className);
         }
       }
     },
@@ -222,18 +235,18 @@ export class TextfieldComponent implements AfterViewInit, OnDestroy {
     init: Function,
     destroy: Function,
     isDisabled: Function,
-    setDisabled: Function
+    setDisabled: Function,
   } = new MDCTextfieldFoundation(this._mdcAdapter);
 
   constructor(
     private _renderer: Renderer2,
     private _root: ElementRef,
-    private _registry: EventRegistry,
-    public ripple: Ripple) { }
+    private _registry: EventRegistry) { }
 
   ngAfterViewInit() {
     this._foundation.init();
   }
+
   ngOnDestroy() {
     this._foundation.destroy();
   }
@@ -261,9 +274,9 @@ export class TextfieldComponent implements AfterViewInit, OnDestroy {
   writeValue(value: string) {
     if (value) {
       this.value = value;
-      this._mdcAdapter.addClass(MDCTextfieldFoundation.cssClasses.UPGRADED);
+      this._mdcAdapter.addClass('mdc-textfield--upgraded');
       if (!this.fullwidth) {
-        this._mdcAdapter.addClassToLabel(MDCTextfieldFoundation.cssClasses.LABEL_FLOAT_ABOVE);
+        this._mdcAdapter.addClassToLabel('mdc-textfield__label--float-above');
       }
     }
   }
